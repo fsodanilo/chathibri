@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF + Chatbot RAG - Processamento de PDFs</title>
+    <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Layout estilo Gemini */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1f1f1f;
+            color: #e3e3e3;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar estilo Gemini */
+        .sidebar-wrapper {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+            position: relative;
+            border-right: 1px solid #2d2d2d;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+            overflow: hidden;
+        }
+
+        /* Header da sidebar */
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #2d2d2d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 48px;
+        }
+
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #e3e3e3;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #c4c4c4;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+
+        .toggle-btn:hover {
+            background-color: rgba(196, 196, 196, 0.15);
+            color: #e3e3e3;
+        }
+
+        .toggle-btn:before {
+            content: "";
+            width: 18px;
+            height: 18px;
+            background: currentColor;
+            mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='currentColor'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M15.75 19.5L8.25 12l7.5-7.5'/%3e%3c/svg%3e") no-repeat center;
+            mask-size: contain;
+            transition: transform 0.2s ease;
+        }
+
+        .sidebar.collapsed .toggle-btn:before {
+            transform: rotate(180deg);
+        }
+
+        /* Conteúdo da sidebar */
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .sidebar-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Seções da sidebar */
+        .sidebar-section {
+            margin-bottom: 4px;
+        }
+
+        .section-toggle {
+            width: 100%;
+            background: none;
+            border: none;
+            color: #9aa0a6;
+            padding: 12px 16px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s ease;
+            border-radius: 8px;
+            margin: 0 8px;
+        }
+
+        .section-toggle:hover {
+            background-color: #2d2d2d;
+            color: #e3e3e3;
+        }
+
+        .section-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 8px;
+        }
+
+        .section-body.expanded {
+            max-height: 300px;
+            padding: 8px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .section-body.expanded::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Links da sidebar */
+        .sidebar a {
+            display: block;
+            padding: 12px 16px;
+            margin: 0 8px;
+            background: #2d2d2d;
+            color: #e3e3e3;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background: #404040;
+        }
+
+        .sidebar p {
+            font-size: 12px;
+            color: #9aa0a6;
+            margin: 8px 16px;
+            line-height: 1.4;
+        }
+
+        /* Estado collapsed da sidebar */
+        .sidebar.collapsed .sidebar-title,
+        .sidebar.collapsed .section-body,
+        .sidebar.collapsed .sidebar p {
+            display: none;
+        }
+
+        .sidebar.collapsed .section-toggle {
+            padding: 12px;
+            margin: 4px;
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .section-toggle span:not(:first-child) {
+            display: none;
+        }
+
+        /* Área principal */
+        .main {
+            flex: 1;
+            background-color: #1f1f1f;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .content-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1200px;
+            height: 100%;
+            box-sizing: border-box;
+            background-color: #1f1f1f;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .content-area::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Cards de seção estilo Gemini */
+        .section-card {
+            background: #2d2d2d;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 1px solid #3a3a3a;
+        }
+
+        .section-card h2 {
+            color: #e3e3e3;
+            margin: 0 0 8px 0;
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .section-card p {
+            color: #9aa0a6;
+            margin: 0 0 20px 0;
+            line-height: 1.5;
+        }
+
+        /* Upload area estilo Gemini */
+        .upload-area {
+            border: 2px dashed #3a3a3a;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #2a2a2a;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+
+        .upload-area:hover {
+            border-color: #4285f4;
+            background: #2f2f2f;
+        }
+
+        .upload-area.dragover {
+            border-color: #34a853;
+            background: #2a332a;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #9aa0a6;
+            margin-bottom: 15px;
+        }
+
+        .upload-btn {
+            background: #4285f4;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .upload-btn:hover {
+            background: #3367d6;
+            transform: translateY(-1px);
+        }
+
+        /* File items estilo Gemini */
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #3a3a3a;
+            transition: background-color 0.2s ease;
+        }
+
+        .file-item:hover {
+            background: #333;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #e3e3e3;
+            margin-bottom: 4px;
+        }
+
+        .file-details {
+            font-size: 13px;
+            color: #9aa0a6;
+        }
+
+        /* Loading estilo Gemini */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: #2d2d2d;
+            border-radius: 12px;
+            margin: 24px 0;
+            border: 1px solid #3a3a3a;
+        }
+
+        .spinner {
+            border: 3px solid #3a3a3a;
+            border-top: 3px solid #4285f4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #3a3a3a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4285f4;
+            transition: width 0.3s ease;
+            width: 0%;
+            border-radius: 4px;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            gap: 8px;
+        }
+
+        .progress-step {
+            padding: 8px 12px;
+            background: #3a3a3a;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #9aa0a6;
+            flex: 1;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active {
+            background: #4285f4;
+            color: white;
+        }
+
+        .progress-step.completed {
+            background: #34a853;
+            color: white;
+        }
+
+        .progress-text {
+            color: #e3e3e3;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        /* Results estilo Gemini */
+        .result-section {
+            background: #2d2d2d;
+            padding: 24px;
+            border-radius: 12px;
+            margin: 24px 0;
+            border: 1px solid #34a853;
+        }
+
+        .error-section {
+            background: #2d2d2d;
+            padding: 24px;
+            border-radius: 12px;
+            margin: 24px 0;
+            border: 1px solid #ea4335;
+        }
+
+        .result-section h3,
+        .error-section h3 {
+            color: #e3e3e3;
+            margin: 0 0 16px 0;
+        }
+
+        /* Tables estilo Gemini */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            background: #2a2a2a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #3a3a3a;
+            color: #e3e3e3;
+            padding: 12px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #3a3a3a;
+            color: #e3e3e3;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) {
+            background: #282828;
+        }
+
+        /* Hide file input */
+        .file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar-wrapper">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <span>🔍</span>
+                    <span>PDF Processor</span>
+                </div>
+                <button class="toggle-btn" onclick="toggleSidebar()" id="toggle-btn"></button>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Seção: Voltar ao Chat -->
+                <div class="sidebar-section">
+                    <a href="/">
+                        🏠 Voltar ao Chat Principal
+                    </a>
+                    <p>Retornar à interface de chat com PDFs</p>
+                </div>
+
+                <!-- Seção: PDFs Armazenados -->
+                <div class="sidebar-section">
+                    <button class="section-toggle" onclick="toggleSection(this)">
+                        <span>📁</span>
+                        <span>PDFs Armazenados</span>
+                    </button>
+                    <div class="section-body expanded">
+                        {% if arquivos %}
+                            {% for pdf in arquivos %}
+                                <div style="padding: 8px 16px; margin: 4px 8px; background: #2a2a2a; border-radius: 6px; border-left: 3px solid #34a853;">
+                                    <div style="font-size: 13px; color: #e3e3e3; font-weight: 500; margin-bottom: 2px;">
+                                        {{ pdf.pdf_name if pdf.pdf_name else 'Nome não disponível' }}
+                                    </div>
+                                    <div style="font-size: 11px; color: #9aa0a6;">
+                                        📊 {{ "{:,}".format(pdf.total_words).replace(',', '.') if pdf.total_words else 0 }} palavras
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>Nenhum PDF encontrado.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Seção: Funcionalidades -->
+                <div class="sidebar-section">
+                    <button class="section-toggle" onclick="toggleSection(this)">
+                        <span>⚙️</span>
+                        <span>Funcionalidades</span>
+                    </button>
+                    <div class="section-body">
+                        <p>• Upload de novos PDFs</p>
+                        <p>• Extração automática de tabelas</p>
+                        <p>• Processamento com IA</p>
+                        <p>• Formato Delta Lake</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="content-container">
+                <div class="content-area">
+                    <div style="margin-bottom: 24px;">
+                        <h1 style="color: #e3e3e3; margin: 0 0 8px 0; font-size: 28px; font-weight: 500;">🔍 Processamento Avançado de PDFs</h1>
+                        <p style="color: #9aa0a6; margin: 0; font-size: 16px;">Extraia tabelas estruturadas de contratos e documentos PDF usando IA</p>
+                    </div>
+
+                    <!-- Seção: Upload de Novos PDFs -->
+                    <div class="section-card">
+                        <h2>📄 Upload de Novo PDF</h2>
+                        <p>Faça upload de um PDF para processamento avançado com extração automática de tabelas</p>
+                        
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">📁</div>
+                            <h3 style="color: #e3e3e3; margin: 16px 0 8px 0;">Arraste um arquivo PDF aqui ou clique para selecionar</h3>
+                            <p style="color: #9aa0a6; margin: 0 0 20px 0;">Formatos aceitos: PDF (até 50MB)</p>
+                            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                Selecionar Arquivo
+                            </button>
+                            <input type="file" id="fileInput" class="file-input" accept=".pdf" onchange="handleFileSelect(event)">
+                        </div>
+                        
+                        <div id="selectedFile" style="display: none;">
+                            <h4 style="color: #e3e3e3; margin: 20px 0 12px 0;">Arquivo Selecionado:</h4>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <div class="file-name" id="fileName"></div>
+                                    <div class="file-details" id="fileDetails"></div>
+                                </div>
+                                <button class="upload-btn" onclick="console.log('🔍 DEBUG: Botão clicado'); uploadFile()">
+                                    🚀 Processar PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção: Tabelas Delta -->
+                    <div class="section-card">
+                        <h2>📊 Tabelas Delta</h2>
+                        <p>Visualize e gerencie as tabelas em formato Delta Lake geradas automaticamente</p>
+                        
+                        <div id="deltaTableDataSection" style="display: none;">
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p id="loadingText" style="color: #e3e3e3; margin: 20px 0;">Processando...</p>
+                        
+                        <div class="progress-steps">
+                            <div class="progress-step" id="step1">📤 Upload</div>
+                            <div class="progress-step" id="step2">📄 Extração</div>
+                            <div class="progress-step" id="step3">🤖 IA</div>
+                            <div class="progress-step" id="step4">💾 Salvamento</div>
+                            <div class="progress-step" id="step5">✅ Completo</div>
+                        </div>
+                        
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">Preparando...</div>
+                    </div>
+
+                    <!-- Resultados -->
+                    <div id="results"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const title = sidebar.querySelector('.sidebar-title');
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            
+            if (isCollapsed) {
+                title.style.display = 'none';
+            } else {
+                title.style.display = 'flex';
+            }
+            
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+
+        function toggleSection(button) {
+            const section = button.nextElementSibling;
+            section.classList.toggle("expanded");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const title = sidebar.querySelector('.sidebar-title');
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+                title.style.display = 'none';
+            } else {
+                sidebar.classList.remove('collapsed');
+                title.style.display = 'flex';
+            }
+        });
+
+        // DEBUG_INJECTION - Código de debug temporário
+        console.log("🔍 DEBUG: Interface carregada com debug ativo");
+
+        let selectedFile = null;
+        let selectedPdfForExtraction = null;
+        let selectedPdfForCustom = null;  // Nova variável para extração customizada
+        
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                handleFile(files[0]);
+            } else {
+                alert('Por favor, selecione um arquivo PDF válido.');
+            }
+        });
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                handleFile(file);
+            } else {
+                alert('Por favor, selecione um arquivo PDF válido.');
+            }
+        }
+        
+        function handleFile(file) {
+            selectedFile = file;
+            
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileDetails').textContent = 
+                `Tamanho: ${(file.size / 1024 / 1024).toFixed(2)} MB | Tipo: ${file.type}`;
+            document.getElementById('selectedFile').style.display = 'block';
+        }
+        
+        // Funções para controle do loading e progresso
+        function showLoading(message = 'Processando...') {
+            const loading = document.getElementById('loading');
+            const loadingText = document.getElementById('loadingText');
+            
+            loadingText.textContent = message;
+            loading.style.display = 'block';
+            
+            // Rola para o loading se necessário
+            loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'none';
+            
+            // Reset progress
+            resetProgress();
+        }
+        
+        function showProgressiveLoading() {
+            showLoading('Iniciando processamento...');
+            resetProgress();
+        }
+        
+        function updateProgress(step, message, percentage) {
+            // Atualiza etapa ativa
+            document.querySelectorAll('.progress-step').forEach((stepEl, index) => {
+                stepEl.classList.remove('active', 'completed');
+                if (index + 1 < step) {
+                    stepEl.classList.add('completed');
+                } else if (index + 1 === step) {
+                    stepEl.classList.add('active');
+                }
+            });
+            
+            // Atualiza barra de progresso
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const loadingText = document.getElementById('loadingText');
+            
+            progressFill.style.width = percentage + '%';
+            progressText.textContent = message;
+            loadingText.textContent = message;
+        }
+        
+        function resetProgress() {
+            document.querySelectorAll('.progress-step').forEach(step => {
+                step.classList.remove('active', 'completed');
+            });
+            
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressFill.style.width = '0%';
+            progressText.textContent = 'Preparando...';
+        }
+        
+        function showResult(title, data, type = 'success') {
+            const results = document.getElementById('results');
+            const sectionClass = type === 'success' ? 'result-section' : 'error-section';
+            
+            let html = `
+                <div class="${sectionClass}">
+                    <h3>${title}</h3>
+            `;
+            
+            if (type === 'success') {
+                if (data.extracted_tables) {
+                    html += '<h4>📊 Tabelas Extraídas:</h4>';
+                    data.extracted_tables.forEach(table => {
+                        html += `
+                            <div style="margin: 15px 0; padding: 15px; background: white; border-radius: 8px;">
+                                <h5>${table.table_name}</h5>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                        `;
+                        
+                        if (table.data && table.data.length > 0) {
+                            Object.keys(table.data[0]).forEach(key => {
+                                html += `<th style="border: 1px solid #dee2e6; padding: 8px; background: #e9ecef; color: #212529; font-weight: bold;">${key}</th>`;
+                            });
+                            html += '</tr></thead><tbody>';
+                            
+                            table.data.forEach((row, index) => {
+                                const rowColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+                                html += `<tr style="background: ${rowColor};">`;
+                                Object.values(row).forEach(value => {
+                                    html += `<td style="border: 1px solid #dee2e6; padding: 8px; color: #495057; background: ${rowColor};">${value || ''}</td>`;
+                                });
+                                html += '</tr>';
+                            });
+                        }
+                        
+                        html += '</tbody></table></div></div>';
+                    });
+                }
+                
+                if (data.filename) {
+                    html += `<p><strong>📄 Arquivo:</strong> ${data.filename}</p>`;
+                }
+                
+                // Exibe informações sobre tabelas deltas geradas
+                if (data.delta_tables_generated && data.delta_tables_generated > 0) {
+                    html += `
+                        <div style="margin: 20px 0; padding: 15px; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <h4 style="color: #0056b3; margin-top: 0;">�️ Tabelas Delta Geradas (${data.delta_tables_generated})</h4>
+                            <p style="margin-bottom: 10px;">As seguintes tabelas em formato Delta (Parquet) foram geradas automaticamente:</p>
+                    `;
+                    
+                    if (data.delta_files) {
+                        for (const [deltaType, deltaPath] of Object.entries(data.delta_files)) {
+                            const deltaName = deltaType.replace('delta_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            const folderName = deltaPath.split('/').pop();
+                            html += `
+                                <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px; border-left: 3px solid #28a745;">
+                                    <strong style="color: #28a745;">📊 ${deltaName}:</strong> ${folderName}
+                                    <div style="margin-top: 5px; font-size: 0.9em; color: #666;">
+                                        <span style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px; margin-right: 8px;">
+                                            📁 Formato: Delta (Parquet + Log)
+                                        </span>
+                                        <span style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">
+                                            📍 Local: ${deltaPath}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    html += `
+                            <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                <h5 style="margin: 0 0 8px 0; color: #495057;">💡 Sobre o Formato Delta:</h5>
+                                <ul style="margin: 0; padding-left: 20px; color: #6c757d; font-size: 0.9em;">
+                                    <li><strong>Parquet:</strong> Formato colunar otimizado para análise</li>
+                                    <li><strong>Log de Transações:</strong> Versionamento e auditoria de mudanças</li>
+                                    <li><strong>Metadados:</strong> Schema, estatísticas e histórico</li>
+                                    <li><strong>Compatibilidade:</strong> Pode ser lido por Pandas, Spark, etc.</li>
+                                </ul>
+                            </div>
+                            
+                            <div style="margin-top: 10px; text-align: center;">
+                                <button onclick="loadDeltaTables()" style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                                    🔍 Ver Tabelas Delta
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (data.processing_time) {
+                    html += `<p><strong>⏱️ Tempo de processamento:</strong> ${data.processing_time}s</p>`;
+                }
+            } else {
+                html += `<p style="color: #721c24;"><strong>Erro:</strong> ${data.detail || 'Erro desconhecido'}</p>`;
+            }
+            
+            html += '</div>';
+            results.innerHTML = html;
+            
+            // Rola para o resultado
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function resetUploadInterface() {
+            selectedFile = null;
+            document.getElementById('selectedFile').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+        }
+        
+        function resetCompleteInterface() {
+            // Reset upload section
+            resetUploadInterface();
+            
+            // Reset extraction section
+            selectedPdfForExtraction = null;
+            document.getElementById('existingFiles').innerHTML = 
+                '<button class="upload-btn" onclick="loadExistingFiles()">🔄 Carregar PDFs Disponíveis</button>';
+            document.getElementById('tableOptions').style.display = 'none';
+            
+            // Reset custom section
+            selectedPdfForCustom = null;
+            document.getElementById('customPdfsList').innerHTML = 
+                '<p style="color: #6c757d;">Clique em "Carregar PDFs" para selecionar um arquivo para extração customizada.</p>';
+            document.getElementById('customDescription').value = '';
+            document.getElementById('customPrompt').value = '';
+            
+            // Clear results
+            document.getElementById('results').innerHTML = '';
+            
+            // Hide loading
+            hideLoading();
+            
+            console.log('Interface completamente resetada');
+        }
+        
+        // Função auxiliar para carregar arquivos sem mostrar loading (para recarregamentos automáticos)
+        async function loadExistingFilesQuiet() {
+            try {
+                const response = await fetch('/available-pdfs');
+                const result = await response.json();
+                
+                if (response.ok && result.available_files && result.available_files.length > 0) {
+                    displayFileList(result.available_files);
+                }
+            } catch (error) {
+                console.log('Erro silencioso ao recarregar arquivos:', error);
+            }
+        }
+        
+        async function uploadFile() {
+            console.log('🔍 DEBUG: uploadFile() chamada');
+            console.log('🔍 DEBUG: selectedFile =', selectedFile);
+            
+            if (!selectedFile) {
+                console.log('❌ DEBUG: Nenhum arquivo selecionado');
+                alert('Selecione um arquivo PDF primeiro.');
+                return;
+            }
+            
+            console.log('✅ DEBUG: Arquivo válido, iniciando upload...');
+            
+            // Inicia a barra de progresso com etapas
+            showProgressiveLoading();
+            
+            console.log('🔍 DEBUG: Criando FormData...');
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            console.log('🔍 DEBUG: FormData criado:', formData);
+            
+            try {
+                // Etapa 1: Upload
+                updateProgress(1, 'Enviando arquivo para o servidor...', 20);
+                
+                console.log('🔍 DEBUG: Enviando requisição...');
+                const response = await fetch('/upload-pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+                console.log('🔍 DEBUG: Resposta recebida:', response.status);
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    console.log('✅ DEBUG: Upload aceito, iniciando polling de status...');
+                    
+                    // Se temos task_id, inicia polling de status
+                    if (result.task_id) {
+                        await pollProcessingStatus(result.task_id, selectedFile.name);
+                    } else {
+                        // Fallback para resposta imediata (compatibilidade)
+                        updateProgress(5, 'Processamento concluído!', 100);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        showResult('Upload realizado com sucesso!', result, 'success');
+                        
+                        setTimeout(() => {
+                            hideLoading();
+                            resetUploadInterface();
+                            loadExistingFilesQuiet();
+                        }, 2000);
+                    }
+                } else {
+                    hideLoading();
+                    showResult('Erro no upload', result, 'error');
+                    resetUploadInterface();
+                }
+            } catch (error) {
+                hideLoading();
+                showResult('Erro de conexão', {detail: error.message}, 'error');
+                resetUploadInterface();
+            }
+        }
+        
+        async function pollProcessingStatus(taskId, filename) {
+            console.log('🔍 DEBUG: Iniciando polling para task:', taskId);
+            
+            if (!taskId || taskId === 'unknown' || taskId === null) {
+                console.error('❌ DEBUG: Task ID inválido:', taskId);
+                hideLoading();
+                showResult('Erro no upload', {
+                    detail: 'Task ID não recebido do backend'
+                }, 'error');
+                resetUploadInterface();
+                return;
+            }
+            
+            const maxAttempts = 60; // 5 minutos máximo (5s * 60)
+            let attempts = 0;
+            
+            const poll = async () => {
+                try {
+                    attempts++;
+                    console.log(`🔍 DEBUG: Polling tentativa ${attempts}/${maxAttempts} para task ${taskId}`);
+                    
+                    const response = await fetch(`/upload-status/${taskId}`);
+                    const statusData = await response.json();
+                    
+                    if (response.ok) {
+                        console.log('🔍 DEBUG: Status recebido:', statusData);
+                        
+                        // Atualiza progresso baseado no status
+                        let progress = statusData.progress || 0;
+                        let message = statusData.message || 'Processando...';
+                        
+                        // Verifica se foi concluído (múltiplas formas de verificar)
+                        const isCompleted = statusData.status === 'completed' || 
+                                          statusData.is_completed === true ||
+                                          progress >= 100;
+                        
+                        const isError = statusData.status === 'error' || 
+                                       statusData.is_error === true;
+                        
+                        console.log(`🔍 DEBUG: isCompleted=${isCompleted}, isError=${isError}, status=${statusData.status}, progress=${progress}`);
+                        
+                        // Mapeia status para etapas da interface
+                        if (statusData.status === 'pending') {
+                            updateProgress(2, message, Math.max(progress, 30));
+                        } else if (statusData.status === 'processing') {
+                            updateProgress(3, message, Math.max(progress, 50));
+                        } else if (isCompleted) {
+                            console.log('🎉 DEBUG: Processamento concluído!');
+                            updateProgress(5, 'Processamento concluído!', 100);
+                            
+                            // Mostra resultado final
+                            if (statusData.result) {
+                                showResult('Upload realizado com sucesso!', statusData.result, 'success');
+                            } else {
+                                showResult('Upload realizado com sucesso!', {
+                                    filename: filename,
+                                    message: message || 'PDF processado com sucesso!'
+                                }, 'success');
+                            }
+                            
+                            setTimeout(() => {
+                                hideLoading();
+                                resetUploadInterface();
+                                loadExistingFilesQuiet();
+                            }, 2000);
+                            
+                            return; // Para o polling
+                        } else if (isError) {
+                            console.error('❌ DEBUG: Erro no processamento:', statusData);
+                            hideLoading();
+                            showResult('Erro no processamento', {
+                                detail: statusData.message || 'Erro desconhecido'
+                            }, 'error');
+                            resetUploadInterface();
+                            return; // Para o polling
+                        }
+                        
+                        // Continua polling se não terminou
+                        if (attempts < maxAttempts && !isCompleted && !isError) {
+                            console.log(`🔄 DEBUG: Continuando polling em 3 segundos...`);
+                            setTimeout(poll, 3000); // Polling a cada 3 segundos (mais rápido)
+                        } else if (attempts >= maxAttempts) {
+                            // Timeout
+                            console.warn('⏰ DEBUG: Timeout no polling');
+                            hideLoading();
+                            showResult('Timeout no processamento', {
+                                detail: 'O processamento está demorando muito. Verifique o status mais tarde.'
+                            }, 'error');
+                            resetUploadInterface();
+                        }
+                    } else {
+                        console.log('❌ DEBUG: Erro no polling:', response.status, response.statusText);
+                        
+                        if (attempts < maxAttempts) {
+                            console.log(`🔄 DEBUG: Tentando novamente em 3 segundos...`);
+                            setTimeout(poll, 3000); // Tenta novamente
+                        } else {
+                            hideLoading();
+                            showResult('Erro no monitoramento', {
+                                detail: 'Não foi possível monitorar o processamento'
+                            }, 'error');
+                            resetUploadInterface();
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ DEBUG: Erro na requisição de polling:', error);
+                    
+                    if (attempts < maxAttempts) {
+                        console.log(`🔄 DEBUG: Erro de conexão, tentando novamente em 3 segundos...`);
+                        setTimeout(poll, 3000); // Tenta novamente
+                    } else {
+                        console.error('❌ DEBUG: Máximo de tentativas excedido');
+                        hideLoading();
+                        showResult('Erro de conexão', {detail: error.message}, 'error');
+                        resetUploadInterface();
+                    }
+                }
+            };
+            
+            // Inicia o polling
+            poll();
+        }
+        
+        async function loadExistingFiles() {
+            showLoading('Carregando PDFs disponíveis...');
+            
+            try {
+                const response = await fetch('/available-pdfs');
+                const result = await response.json();
+                
+                if (response.ok && result.available_files && result.available_files.length > 0) {
+                    displayFileList(result.available_files);
+                } else {
+                    document.getElementById('existingFiles').innerHTML = 
+                        '<button class="upload-btn" onclick="loadExistingFiles()">🔄 Carregar PDFs Disponíveis</button>' +
+                        '<p style="margin-top: 10px; color: #6c757d;">Nenhum PDF encontrado. Faça upload de um PDF primeiro.</p>';
+                }
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                document.getElementById('existingFiles').innerHTML = 
+                    '<button class="upload-btn" onclick="loadExistingFiles()">🔄 Carregar PDFs Disponíveis</button>' +
+                    '<p style="margin-top: 10px; color: #dc3545;">Erro ao carregar arquivos: ' + error.message + '</p>';
+            }
+        }
+        
+        function displayFileList(files) {
+            let html = '<h4>PDFs Disponíveis:</h4>';
+            
+            files.forEach(file => {
+                html += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${file.filename}</div>
+                            <div class="file-details">
+                                ${file.total_pages} páginas | ${file.total_chunks} chunks | 
+                                Upload: ${new Date(file.upload_date).toLocaleString('pt-BR')}
+                            </div>
+                        </div>
+                        <button class="extract-btn" onclick="selectFileForExtraction('${file.filename}')">
+                            Selecionar
+                        </button>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('existingFiles').innerHTML = html;
+        }
+        
+        function selectFileForExtraction(filename) {
+            selectedPdfForExtraction = filename;
+            
+            // Destaca arquivo selecionado
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.style.backgroundColor = '#f8f9fa';
+            });
+            
+            event.target.parentElement.parentElement.style.backgroundColor = '#d4edda';
+            
+            // Mostra opções de tabela
+            document.getElementById('tableOptions').style.display = 'block';
+        }
+        
+        async function extractTables() {
+            alert('⚠️ Funcionalidade em desenvolvimento. Use o sistema de chat para consultar os PDFs após o upload.');
+            return;
+            
+            if (!selectedPdfForExtraction) {
+                alert('Selecione um PDF primeiro.');
+                return;
+            }
+            
+            const selectedTables = [];
+            document.querySelectorAll('.table-option input:checked').forEach(checkbox => {
+                selectedTables.push(checkbox.value);
+            });
+            
+            if (selectedTables.length === 0) {
+                alert('Selecione pelo menos um tipo de tabela.');
+                return;
+            }
+            
+            showLoading('Extraindo tabelas com IA...');
+            
+            try {
+                const response = await fetch('/extract-tables-from-existing', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filename: selectedPdfForExtraction,
+                        target_tables: selectedTables
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('Tabelas extraídas com sucesso!', result, 'success');
+                } else {
+                    showResult('Erro na extração', result, 'error');
+                }
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                showResult('Erro de conexão', {detail: error.message}, 'error');
+            }
+        }
+        
+        async function generateCustomTable() {
+            alert('⚠️ Funcionalidade em desenvolvimento. Use o sistema de chat principal para consultas personalizadas.');
+            return;
+            
+            // Verifica se um PDF foi selecionado para extração customizada
+            if (!selectedPdfForCustom) {
+                alert('Por favor, selecione um PDF primeiro na lista acima.');
+                // Destaca o botão de carregar PDFs se a lista estiver vazia
+                if (document.getElementById('customPdfsList').innerHTML.includes('Clique em "Carregar PDFs"')) {
+                    const loadButton = document.querySelector('button[onclick="loadCustomPdfs()"]');
+                    if (loadButton) {
+                        loadButton.style.animation = 'pulse 1s infinite';
+                        loadButton.style.backgroundColor = '#ffc107';
+                        loadButton.style.borderColor = '#ffc107';
+                        setTimeout(() => {
+                            loadButton.style.animation = '';
+                            loadButton.style.backgroundColor = '#ffc107';
+                            loadButton.style.borderColor = '';
+                        }, 3000);
+                    }
+                    loadCustomPdfs();
+                }
+                return;
+            }
+            
+            const description = document.getElementById('customDescription').value.trim();
+            const customPrompt = document.getElementById('customPrompt').value.trim();
+            
+            if (!description) {
+                alert('Descreva o tipo de tabela que você quer extrair.');
+                const descField = document.getElementById('customDescription');
+                descField.focus();
+                descField.style.borderColor = '#dc3545';
+                descField.style.backgroundColor = '#f8d7da';
+                
+                // Remove o destaque de erro após 3 segundos
+                setTimeout(() => {
+                    descField.style.borderColor = selectedPdfForCustom ? '#ffc107' : '#dee2e6';
+                    descField.style.backgroundColor = selectedPdfForCustom ? '#fff3cd' : '';
+                }, 3000);
+                return;
+            }
+            
+            // Inicia o loading com etapas específicas para extração customizada
+            showProgressiveLoading();
+            updateProgress(1, `Analisando PDF: ${selectedPdfForCustom}...`, 25);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            try {
+                updateProgress(2, 'Processando descrição da tabela...', 50);
+                await new Promise(resolve => setTimeout(resolve, 600));
+                
+                const response = await fetch('/generate-custom-table', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filename: selectedPdfForCustom,
+                        table_description: description,
+                        custom_prompt: customPrompt
+                    })
+                });
+                
+                updateProgress(3, 'IA gerando tabela personalizada...', 85);
+                await new Promise(resolve => setTimeout(resolve, 1200));
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    updateProgress(4, 'Tabela customizada gerada com sucesso!', 100);
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    
+                    showResult(`Tabela customizada gerada para ${selectedPdfForCustom}!`, result, 'success');
+                    
+                    // Limpa campos mas mantém PDF selecionado e feedback
+                    document.getElementById('customDescription').value = '';
+                    document.getElementById('customPrompt').value = '';
+                    
+                    // Restaura estilo normal do campo de descrição mas mantém indicação de PDF selecionado
+                    const description = document.getElementById('customDescription');
+                    description.style.backgroundColor = '#fff3cd';
+                    description.style.borderColor = '#ffc107';
+                    description.placeholder = `Descreva outra tabela a extrair de: ${selectedPdfForCustom}`;
+                    
+                    setTimeout(() => {
+                        hideLoading();
+                    }, 2000);
+                } else {
+                    hideLoading();
+                    showResult('Erro na geração da tabela customizada', result, 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showResult('Erro de conexão', {detail: error.message}, 'error');
+                console.error('Erro na geração de tabela customizada:', error);
+            }
+        }
+        
+        async function loadCustomPdfs() {
+            alert('⚠️ Funcionalidade em desenvolvimento. Use o sistema de chat principal.');
+            return;
+        }
+        
+        function displayCustomPdfList(files) {
+            let html = '<h4>📄 Selecione um PDF para Extração Customizada:</h4>';
+            
+            files.forEach(file => {
+                html += `
+                    <div class="file-item" style="margin-bottom: 10px;">
+                        <div class="file-info">
+                            <div class="file-name">${file.filename}</div>
+                            <div class="file-details">
+                                ${file.total_pages} páginas | ${file.total_chunks} chunks | 
+                                Upload: ${new Date(file.upload_date).toLocaleString('pt-BR')}
+                            </div>
+                        </div>
+                        <button class="extract-btn" onclick="selectCustomPdf('${file.filename}')" 
+                                style="background: #ffc107; color: #000;">
+                            Selecionar
+                        </button>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('customPdfsList').innerHTML = html;
+        }
+        
+        function selectCustomPdf(filename) {
+            selectedPdfForCustom = filename;
+            
+            // Remove destaque de todos os itens na seção customizada
+            document.querySelectorAll('#customPdfsList .file-item').forEach(item => {
+                item.style.backgroundColor = '#f8f9fa';
+                item.style.border = '1px solid #dee2e6';
+                // Remove classe selected se existir
+                item.classList.remove('selected-pdf');
+            });
+            
+            // Encontra e destaca o item selecionado
+            const selectedElement = Array.from(document.querySelectorAll('#customPdfsList .file-item .file-name'))
+                .find(el => el.textContent === filename);
+            
+            if (selectedElement) {
+                const fileItem = selectedElement.closest('.file-item');
+                fileItem.style.backgroundColor = '#fff3cd';
+                fileItem.style.border = '2px solid #ffc107';
+                fileItem.classList.add('selected-pdf');
+            }
+            
+            // Atualiza feedback visual no campo de descrição
+            const description = document.getElementById('customDescription');
+            description.style.backgroundColor = '#fff3cd';
+            description.style.borderColor = '#ffc107';
+            description.placeholder = `Descreva a tabela a extrair de: ${filename}`;
+            
+            // Mostra feedback de seleção
+            const feedbackDiv = document.getElementById('customPdfSelection') || document.createElement('div');
+            feedbackDiv.id = 'customPdfSelection';
+            feedbackDiv.innerHTML = `
+                <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 10px; margin: 10px 0; color: #155724;">
+                    ✅ <strong>PDF Selecionado:</strong> ${filename}
+                </div>
+            `;
+            
+            // Insere o feedback antes dos campos de entrada
+            const descriptionLabel = document.querySelector('label[for="customDescription"]');
+            if (descriptionLabel && !document.getElementById('customPdfSelection')) {
+                descriptionLabel.parentNode.insertBefore(feedbackDiv, descriptionLabel);
+            } else if (document.getElementById('customPdfSelection')) {
+                document.getElementById('customPdfSelection').innerHTML = feedbackDiv.innerHTML;
+            }
+            
+            console.log(`PDF selecionado para extração customizada: ${filename}`);
+        }
+        
+        function clearCustomSelection() {
+            selectedPdfForCustom = null;
+            
+            // Remove destaque de todos os itens
+            document.querySelectorAll('#customPdfsList .file-item').forEach(item => {
+                item.style.backgroundColor = '#f8f9fa';
+                item.style.border = '1px solid #dee2e6';
+                item.classList.remove('selected-pdf');
+            });
+            
+            // Restaura campos para estado inicial
+            const description = document.getElementById('customDescription');
+            description.style.backgroundColor = '';
+            description.style.borderColor = '#dee2e6';
+            description.placeholder = 'Ex: tabela de ingredientes, lista de cláusulas, cronograma de eventos...';
+            
+            // Remove feedback de seleção
+            const feedbackDiv = document.getElementById('customPdfSelection');
+            if (feedbackDiv) {
+                feedbackDiv.remove();
+            }
+            
+            console.log('Seleção customizada limpa');
+        }
+
+        // Função para carregar PDFs armazenados (atualizada para usar dados do backend)
+        async function loadStoredPdfs() {
+            showLoading('Carregando PDFs armazenados no DynamoDB...');
+            
+            try {
+                // Obter user_id do usuário autenticado (passado pelo template)
+                const userId = '{{ user.email if user else "user_default_001" }}';
+                
+                // Faz uma nova requisição para garantir dados atualizados
+                const response = await fetch(`http://backend-service:8000/pdfs?user_id=${encodeURIComponent(userId)}`);
+                const result = await response.json();
+                
+                if (response.ok && result.pdfs && result.pdfs.length > 0) {
+                    displayStoredPdfs(result.pdfs);
+                } else {
+                    document.getElementById('storedPdfsList').innerHTML = 
+                        '<p style="color: #6c757d;">Nenhum PDF encontrado no DynamoDB para este usuário.</p>';
+                }
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                document.getElementById('storedPdfsList').innerHTML = 
+                    '<p style="color: #dc3545;">Erro ao carregar PDFs: ' + error.message + '</p>';
+            }
+        }
+        
+        function displayStoredPdfs(pdfs) {
+            let html = '';
+            
+            if (pdfs.length === 0) {
+                html = '<p style="color: #6c757d;">Nenhum PDF encontrado no DynamoDB.</p>';
+            } else {
+                html = `
+                    <div style="margin-bottom: 15px;">
+                        <h4>📁 PDFs Armazenados no DynamoDB (${pdfs.length} arquivos)</h4>
+                    </div>
+                `;
+                
+                pdfs.forEach(pdf => {
+                    const pdfName = pdf.pdf_name || 'Nome não disponível';
+                    const wordCount = pdf.word_count || 0;
+                    
+                    html += `
+                        <div class="file-item" style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px;">
+                            <div class="file-info" style="flex: 1;">
+                                <div class="file-name" style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: #28a745;">📄</span>
+                                    <strong>${pdfName}</strong>
+                                </div>
+                                <div class="file-details" style="margin-top: 5px; color: #6c757d;">
+                                    � Total de palavras: ${wordCount.toLocaleString('pt-BR')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('storedPdfsList').innerHTML = html;
+        }
+        
+        async function downloadStoredPdf(pdfId) {
+            try {
+                // Cria link temporário para download
+                const link = document.createElement('a');
+                link.href = `/download-pdf/${pdfId}`;
+                link.download = '';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log(`Download iniciado para PDF ID: ${pdfId}`);
+            } catch (error) {
+                alert('Erro ao baixar PDF: ' + error.message);
+            }
+        }
+        
+        async function processStoredPdf(pdfId, filename) {
+            if (!confirm(`Processar PDF "${filename}" para extrair tabelas?`)) {
+                return;
+            }
+            
+            showLoading(`Processando PDF ${filename}...`);
+            
+            try {
+                const response = await fetch(`/process-stored-pdf/${pdfId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_tables: ['valores_contrato', 'produtos_servicos', 'cronograma_pagamentos']
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult(`PDF ${filename} processado com sucesso!`, result.processing_result, 'success');
+                } else {
+                    showResult(`Erro ao processar ${filename}`, result, 'error');
+                }
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                showResult('Erro de conexão', {detail: error.message}, 'error');
+            }
+        }
+        
+        async function deleteStoredPdf(pdfId, filename) {
+            if (!confirm(`Tem certeza que deseja remover o PDF "${filename}" do MongoDB?\n\nEsta ação não pode ser desfeita.`)) {
+                return;
+            }
+            
+            showLoading(`Removendo PDF ${filename}...`);
+            
+            try {
+                const response = await fetch(`/delete-pdf/${pdfId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`PDF "${filename}" removido com sucesso!`);
+                    // Recarrega a lista
+                    loadStoredPdfs();
+                } else {
+                    alert('Erro ao remover PDF: ' + result.detail);
+                }
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                alert('Erro de conexão: ' + error.message);
+            }
+        }
+        
+        async function refreshStorageStats() {
+            showLoading('Carregando estatísticas...');
+            
+            try {
+                const response = await fetch('/stored-pdfs');
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const stats = result;
+                    let statsHtml = `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff;">
+                                <h5 style="margin: 0; color: #007bff;">📁 Total de PDFs</h5>
+                                <p style="margin: 5px 0 0 0; font-size: 1.5em; font-weight: bold;">${stats.total_pdfs}</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <h5 style="margin: 0; color: #28a745;">💾 Espaço Total</h5>
+                                <p style="margin: 5px 0 0 0; font-size: 1.5em; font-weight: bold;">${stats.total_size_mb} MB</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                                <h5 style="margin: 0; color: #17a2b8;">📄 Páginas Totais</h5>
+                                <p style="margin: 5px 0 0 0; font-size: 1.5em; font-weight: bold;">${stats.stored_pdfs.reduce((sum, pdf) => sum + pdf.page_count, 0)}</p>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                <h5 style="margin: 0; color: #e68500;">📊 Média por PDF</h5>
+                                <p style="margin: 5px 0 0 0; font-size: 1.2em; font-weight: bold;">${stats.total_pdfs > 0 ? (stats.total_size_mb / stats.total_pdfs).toFixed(2) : 0} MB</p>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding: 10px; background: white; border-radius: 8px;">
+                            <p><strong>🕒 Última atualização:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                        </div>
+                    `;
+                    
+                    document.getElementById('statsContent').innerHTML = statsHtml;
+                    document.getElementById('storageStats').style.display = 'block';
+                } else {
+                    document.getElementById('statsContent').innerHTML = 
+                        '<p style="color: #dc3545;">Erro ao carregar estatísticas: ' + result.detail + '</p>';
+                }
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                document.getElementById('statsContent').innerHTML = 
+                    '<p style="color: #dc3545;">Erro de conexão: ' + error.message + '</p>';
+            }
+        }
+        
+        // async function loadDeltaTables() {
+        //     alert('⚠️ Funcionalidade Delta Tables será implementada em futuras versões.');
+        //     return;
+        // }
+        
+        function displayDeltaTables(deltaTables) {
+            const deltaSection = document.getElementById('deltaTablesSection');
+            
+            if (deltaTables.length === 0) {
+                deltaSection.innerHTML = `
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 15px; color: #856404;">
+                        <h4 style="margin: 0 0 10px 0;">⚠️ Nenhuma tabela Delta encontrada</h4>
+                        <p style="margin: 0;">Ainda não há tabelas Delta geradas. Processe um PDF primeiro ou converta CSVs existentes.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 4px; padding: 15px; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #0c5460;">🗂️ Tabelas Delta Disponíveis (${deltaTables.length})</h3>
+                    <p style="margin: 0 0 15px 0; color: #0c5460;">Tabelas em formato Delta Lake (Parquet + Log de Transações)</p>
+                    <div style="margin-bottom: 15px;">
+                        <button onclick="convertAllCsvsToDelta()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+                            🔄 Converter CSVs para Delta
+                        </button>
+                        <button onclick="loadDeltaTables()" style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                            🔄 Recarregar Lista
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            deltaTables.forEach(table => {
+                const tableName = table.table_name;
+                const metadata = table.metadata || {};
+                const commitInfo = table.commit_info || {};
+                
+                html += `
+                    <div style="margin: 15px 0; padding: 15px; background: #d1ecf1; border-radius: 8px; border-left: 4px solid #d1ecf1;">
+                        <h4 style="margin: 0 0 10px 0; color: #0c5460;">📊 ${tableName}</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                            <div style="color: #0c5460; font-size: 0.8em;">
+                                <strong>📈 Registros:</strong> ${commitInfo.operationMetrics?.numOutputRows || 'N/A'}<br>
+                                <strong>📁 Arquivos:</strong> ${commitInfo.operationMetrics?.numFiles || table.parquet_files?.length || 'N/A'}<br>
+                                <strong>💾 Tamanho:</strong> ${formatBytes(commitInfo.operationMetrics?.numOutputBytes) || 'N/A'}
+                            </div>
+                            <div style="color: #0c5460; font-size: 0.8em;">
+                                <strong>📅 Criado:</strong> ${formatDate(metadata.created_at) || 'N/A'}<br>
+                                <strong>🔧 Operação:</strong> ${commitInfo.operation || 'N/A'}<br>
+                                <strong>📋 Colunas:</strong> ${metadata.columns_count || metadata.columns?.length || 'N/A'}
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button onclick="viewDeltaTableData('${tableName}')" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 8px; font-size: 0.9em;">
+                                👁️ Ver Dados
+                            </button>
+                            <button onclick="viewDeltaTableInfo('${tableName}')" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                                ℹ️ Detalhes
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            deltaSection.innerHTML = html;
+        }
+        
+        async function convertAllCsvsToDelta() {
+            showLoading('Convertendo CSVs para formato Delta...');
+            
+            try {
+                const response = await fetch('/batch-convert-csvs-to-delta', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult(`Conversão concluída: ${result.success_count} sucessos, ${result.error_count} erros`, result, 'success');
+                    
+                    // Recarrega lista após conversão
+                    setTimeout(() => {
+                        loadDeltaTables();
+                    }, 2000);
+                } else {
+                    showResult('Erro na conversão em lote', result, 'error');
+                }
+            } catch (error) {
+                showResult('Erro de conexão', {detail: error.message}, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function viewDeltaTableData(tableName) {
+            showLoading(`Carregando dados da tabela ${tableName}...`);
+            
+            try {
+                const response = await fetch(`/delta-table/${tableName}/data?limit=50`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayTableData(result);
+                } else {
+                    showResult('Erro ao carregar dados', result, 'error');
+                }
+            } catch (error) {
+                showResult('Erro de conexão', {detail: error.message}, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function viewDeltaTableInfo(tableName) {
+            showLoading(`Carregando informações da tabela ${tableName}...`);
+            
+            try {
+                const response = await fetch(`/delta-table/${tableName}`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayTableInfo(result);
+                } else {
+                    showResult('Erro ao carregar informações', result, 'error');
+                }
+            } catch (error) {
+                showResult('Erro de conexão', {detail: error.message}, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function displayTableData(result) {
+            if (!result.data || result.data.length === 0) {
+                showResult('Tabela vazia', {detail: 'A tabela não contém dados.'}, 'error');
+                return;
+            }
+            
+            let html = `
+                <div style="background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                    <h3 style="margin: 0 0 15px 0; color: #0d47a1;">📊 Dados da Tabela: ${result.table_name}</h3>
+                    <p style="margin: 0 0 15px 0; color: #1565c0;"><strong>Total de registros:</strong> ${result.total_rows} | <strong>Exibindo:</strong> ${result.returned_rows}</p>
+                    
+                    <div style="overflow-x: auto; margin-top: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+                        <table style="width: 100%; border-collapse: collapse; background: #fff;">
+                            <thead>
+                                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+            `;
+            
+            // Cabeçalhos com melhor estilo e contraste
+            result.columns.forEach(col => {
+                html += `<th style="border: 1px solid #dee2e6; padding: 12px 8px; text-align: left; font-weight: bold; color: #212529; background: #e9ecef;">${col}</th>`;
+            });
+            
+            html += '</tr></thead><tbody>';
+            
+            // Dados com alternância de cores e texto escuro
+            result.data.forEach((row, index) => {
+                const rowColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+                html += `<tr style="background: ${rowColor}; border-bottom: 1px solid #dee2e6;">`;
+                result.columns.forEach(col => {
+                    const value = row[col] || '';
+                    html += `<td style="border: 1px solid #dee2e6; padding: 8px; color: #495057; background: ${rowColor};">${value}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            
+            if (result.has_more) {
+                html += `<p style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-radius: 4px; font-style: italic; color: #0c5460;">
+                    ℹ️ Mostrando apenas os primeiros ${result.returned_rows} registros de ${result.total_rows} total.
+                </p>`;
+            }
+            
+            html += `
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button onclick="hideDeltaTableData()" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                            ❌ Fechar
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Exibe na nova div dentro do card de Tabelas Delta
+            const deltaTableDataSection = document.getElementById('deltaTableDataSection');
+            deltaTableDataSection.innerHTML = html;
+            deltaTableDataSection.style.display = 'block';
+            
+            // Faz scroll suave para a seção de dados
+            deltaTableDataSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function displayTableInfo(result) {
+            const tableInfo = result.table_info;
+            const metadata = tableInfo.metadata || {};
+            const commitInfo = tableInfo.commit_info || {};
+            
+            let html = `
+                <div class="result-section">
+                    <h3>ℹ️ Informações Detalhadas: ${result.table_name}</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <h4 style="margin-top: 0;">📋 Metadados Gerais</h4>
+                            <p><strong>Nome da Tabela:</strong> ${metadata.table_name || 'N/A'}</p>
+                            <p><strong>Registros:</strong> ${metadata.rows_count || 'N/A'}</p>
+                            <p><strong>Colunas:</strong> ${metadata.columns_count || 'N/A'}</p>
+                            <p><strong>Criado em:</strong> ${formatDate(metadata.created_at) || 'N/A'}</p>
+                        </div>
+                        
+                        <div style="background: #e9ecef; padding: 15px; border-radius: 8px;">
+                            <h4 style="margin-top: 0;">🔧 Informações de Commit</h4>
+                            <p><strong>Versão:</strong> ${commitInfo.version || 'N/A'}</p>
+                            <p><strong>Operação:</strong> ${commitInfo.operation || 'N/A'}</p>
+                            <p><strong>Timestamp:</strong> ${formatDate(commitInfo.timestamp) || 'N/A'}</p>
+                            <p><strong>Arquivos:</strong> ${commitInfo.operationMetrics?.numFiles || 'N/A'}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+                        <h4 style="margin-top: 0;">📁 Estrutura de Arquivos</h4>
+                        <ul style="margin: 0; padding-left: 20px;">
+            `;
+            
+            if (tableInfo.parquet_files && tableInfo.parquet_files.length > 0) {
+                tableInfo.parquet_files.forEach(file => {
+                    html += `<li><strong>📄 Dados:</strong> ${file}</li>`;
+                });
+            }
+            
+            html += `
+                            <li><strong>📋 Log de Transações:</strong> _delta_log/</li>
+                            <li><strong>📊 Metadados:</strong> 00000000000000000000.json</li>
+                            <li><strong>ℹ️ Commit Info:</strong> commit_info.json</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button onclick="viewDeltaTableData('${result.table_name}')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
+                            👁️ Ver Dados da Tabela
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const results = document.getElementById('results');
+            results.innerHTML = html;
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 'N/A') return 'N/A';
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            if (bytes === 0) return '0 Bytes';
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString || dateString === 'N/A') return 'N/A';
+            try {
+                // Se for timestamp em milissegundos
+                if (typeof dateString === 'number') {
+                    return new Date(dateString).toLocaleString('pt-BR');
+                }
+                // Se for string ISO
+                return new Date(dateString).toLocaleString('pt-BR');
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        // Função para fechar o card de dados da tabela
+        function hideDeltaTableData() {
+            const deltaTableDataSection = document.getElementById('deltaTableDataSection');
+            deltaTableDataSection.style.display = 'none';
+            deltaTableDataSection.innerHTML = '';
+        }
+        // ...existing JavaScript code continues here...
+        
+        // Inicialização automática quando a página carrega
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log("🚀 Página carregada, inicializando PDF processor...");
+            
+            // Inicializa sidebar
+            const sidebar = document.getElementById('sidebar');
+            const title = sidebar.querySelector('.sidebar-title');
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            
+            if (isCollapsed) {
+                sidebar.classList.add('collapsed');
+                title.style.display = 'none';
+            } else {
+                sidebar.classList.remove('collapsed');
+                title.style.display = 'flex';
+            }
+        });
+    </script>
+</body>
+</html>

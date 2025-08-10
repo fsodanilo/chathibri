@@ -1,0 +1,53 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+python-dotenv==1.0.0
+
+# Google AI e LangChain
+google-generativeai==0.3.2
+langchain>=0.1.16,<0.3.0
+langchain-google-genai>=0.0.8,<1.0.0
+langchain-community>=0.0.35,<1.0.0
+langchain-openai>=0.1.0,<1.0.0
+langchain-aws>=0.1.4,<1.0.0
+langsmith>=0.1.0,<0.2.0
+
+# AWS DynamoDB e Bedrock
+boto3>=1.34.0,<1.36.0
+botocore>=1.34.0,<1.36.0
+aioboto3>=12.0.0,<13.0.0
+
+# AWS S3 (já incluído no boto3)
+# boto3 inclui suporte para S3 automaticamente
+
+# ChromaDB client
+chromadb==0.4.18
+requests==2.31.0
+
+# PDF Processing
+PyPDF2==3.0.1
+PyMuPDF==1.23.0
+pdfminer.six==20221105
+pdfplumber==0.9.0
+tabula-py==2.8.2
+tika==2.6.0
+PyCryptodome==3.18.0
+
+# ML e Embeddings
+sentence-transformers>=2.7.0,<3.0.0
+numpy>=1.24.0,<2.0.0
+transformers>=4.36.0,<5.0.0
+torch>=2.1.0,<3.0.0
+huggingface_hub>=0.20.0,<1.0.0
+
+# Data Processing
+pandas>=2.1.0,<3.0.0
+openpyxl>=3.1.0,<4.0.0
+pyarrow>=14.0.0,<16.0.0
+
+# Sistema
+pydantic==2.5.0
+
+# MongoDB (para compatibilidade legada)
+pymongo==4.6.0
+
