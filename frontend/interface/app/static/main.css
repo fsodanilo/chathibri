@@ -1,0 +1,631 @@
+/* Estilos para o sistema de feedback */
+.feedback-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Círculo de progresso para processamento */
+.processing-indicator {
+    display: none;
+    margin: 20px auto;
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 300px;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #4CAF50;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 10px;
+}
+
+.processing-text {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.typing-dots {
+    display: inline-block;
+    position: relative;
+    width: 20px;
+    height: 4px;
+}
+
+.typing-dots span {
+    position: absolute;
+    top: 0;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #4CAF50;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+    left: 0px;
+    animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+    left: 8px;
+    animation-delay: -0.16s;
+}
+
+.typing-dots span:nth-child(3) {
+    left: 16px;
+}
+
+/* Estilo especial para o botão de envio quando está carregando */
+.mic-button:disabled {
+    cursor: not-allowed;
+    transform: scale(0.95);
+}
+
+/* Input desabilitado durante processamento */
+input[type="text"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Animação de entrada para novas mensagens */
+.chat-message.new-message {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+    .feedback-buttons {
+        justify-content: center;
+    }
+    
+    .feedback-form-buttons {
+        flex-direction: column;
+    }
+    
+    .submit-feedback,
+    .cancel-feedback {
+        width: 100%;
+    }
+}
+
+.main {
+    flex: 1;
+    background-color: #1f1f1f;
+    display: flex;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 768px;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: #1f1f1f;
+}
+
+.chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    padding-bottom: 120px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.chat-history::-webkit-scrollbar {
+    display: none;
+}
+
+.chat-message {
+    display: flex;
+    margin-bottom: 32px;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.chat-message.user {
+    justify-content: flex-end;
+}
+
+.chat-message.bot {
+    justify-content: flex-start;
+}
+
+.message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.user-avatar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.bot-avatar {
+    background: #2d2d2d;
+    color: #9aa0a6;
+}
+
+.bubble {
+    max-width: 65%;
+    padding: 16px 20px;
+    border-radius: 18px;
+    font-size: 15px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.user-bubble {
+    background: #2d2d2d;
+    color: #e3e3e3;
+    margin-left: auto;
+}
+
+.bot-bubble {
+    background: transparent;
+    color: #e3e3e3;
+    padding: 0;
+    margin-right: auto;
+}
+
+/* Feedback buttons estilo Gemini */
+.feedback-buttons {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.feedback-btn {
+    background: transparent !important;
+    border: 1px solid transparent;
+    color: #9aa0a6;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feedback-btn:hover {
+    background: rgba(154, 160, 166, 0.1) !important;
+    color: #e3e3e3;
+}
+
+.feedback-btn.active {
+    color: #4285f4 !important;
+    background: rgba(66, 133, 244, 0.1) !important;
+}
+
+.feedback-btn.like-btn.active {
+    color: #34a853 !important;
+    background: rgba(52, 168, 83, 0.1) !important;
+}
+
+.feedback-btn.dislike-btn.active {
+    color: #ea4335 !important;
+    background: rgba(234, 67, 53, 0.1) !important;
+}
+
+/* Ícones SVG para feedback */
+.icon {
+    width: 16px;
+    height: 16px;
+    background-color: currentColor;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+}
+
+.thumb-up {
+    mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.5c.083.205.173.405.27.602.398.815 1.027 1.398 1.709 1.398h.04c.138 0 .277-.038.402-.118.264-.168.38-.504.215-.777-.02-.033-.547-.94-.547-.94s.549-.907.549-.907c.177-.289.008-.57-.153-.684a.75.75 0 0 0-.732-.089l-.733.244-.402-.537a1.498 1.498 0 0 0-1.171-.609H5.904'/%3e%3c/svg%3e");
+}
+
+.thumb-down {
+    mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M7.498 15.25H4.372c-1.026 0-1.945-.694-2.054-1.715a12.137 12.137 0 0 1-.068-1.285c0-2.848.992-5.464 2.649-7.521C5.287 4.247 5.886 4 6.504 4h4.016a4.5 4.5 0 0 1 1.423.23l3.114 1.04a4.5 4.5 0 0 0 1.423.23h1.294M7.498 15.25c.618 0 .991.724.725 1.282A7.471 7.471 0 0 0 7.5 19.75 2.25 2.25 0 0 0 9.75 22a.75.75 0 0 0 .75-.75v-.633c0-.573.11-1.14.322-1.672.304-.76.93-1.33 1.653-1.715a9.04 9.04 0 0 0 2.86-2.4c.498-.634 1.226-1.08 2.032-1.08h.384m-10.253 1.5H9.7m8.075-9.75c.01.05.027.1.05.148.593 1.2.925 2.55.925 3.977 0 1.487-.36 2.89-.999 4.125m.023-8.25c-.076-.365.183-.75.575-.75h.908c.889 0 1.713.518 1.972 1.368.339 1.11.521 2.287.521 3.507 0 1.553-.295 3.036-.831 4.398C20.613 14.547 19.833 15 19.05 15h-1.053c-.472 0-.745-.556-.5-.96a8.95 8.95 0 0 0 .303-.54'/%3e%3c/svg%3e");
+}
+
+.feedback-form {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feedback-form textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 12px;
+    background: #2c2c38;
+    border: 2px solid #2c2c38;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.feedback-form textarea:focus {
+    outline: none;
+    border-color: #4CAF50;
+    background: #363640;
+}
+
+.feedback-form textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.feedback-form-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: flex-end;
+}
+
+.submit-feedback,
+.cancel-feedback {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.submit-feedback {
+    background: #4CAF50;
+    color: white;
+}
+
+.submit-feedback:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+}
+
+.submit-feedback:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.cancel-feedback {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cancel-feedback:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.feedback-status {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.feedback-status.success {
+    background: #2d2d2d;
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.feedback-status.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+/* Sidebar estilo Gemini */
+.sidebar-wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+.sidebar {
+    width: 280px;
+    background-color: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    position: relative;
+    border-right: 1px solid #2d2d2d;
+    overflow: hidden;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+    overflow: hidden;
+}
+
+/* Header da sidebar */
+.sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #2d2d2d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+}
+
+.sidebar-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #e3e3e3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+.toggle-btn:active {
+    transform: scale(0.95);
+}
+
+.toggle-btn:before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.5' stroke='currentColor'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M15.75 19.5L8.25 12l7.5-7.5'/%3e%3c/svg%3e") no-repeat center;
+    mask-size: contain;
+    transition: transform 0.2s ease;
+}
+
+.sidebar.collapsed .toggle-btn:before {
+    transform: rotate(180deg);
+}
+
+/* Conteúdo da sidebar */
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    display: none;
+}
+
+/* Seções da sidebar */
+.sidebar-section {
+    margin-bottom: 4px;
+}
+
+.section-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    color: #9aa0a6;
+    padding: 12px 16px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+    border-radius: 8px;
+    margin: 0 8px;
+}
+
+.section-toggle:hover {
+    background-color: #2d2d2d;
+    color: #e3e3e3;
+}
+
+.section-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 8px;
+}
+
+.section-body.expanded {
+    max-height: 300px;
+    padding: 8px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.section-body.expanded::-webkit-scrollbar {
+    display: none;
+}
+
+/* Chat list items - estilo Gemini */
+.chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chat-item {
+    padding: 12px 16px;
+    margin: 0 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border: none;
+    background: none;
+}
+
+.chat-item:hover {
+    background-color: #2d2d2d;
+}
+
+.chat-item[style*="background: #2a2a2a"]:hover {
+    background-color: #3a3a3a !important;
+}
+
+.chat-question-sidebar {
+    font-size: 14px;
+    color: #e3e3e3;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.chat-data-sidebar {
+    font-size: 12px;
+    color: #9aa0a6;
+    margin-left: 8px;
+}
+
+.chat-answer-sidebar {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    font-size: 13px;
+    color: #9aa0a6;
+    line-height: 1.4;
+    margin-top: 8px;
+}
+
+.chat-item.expanded .chat-answer-sidebar {
+    max-height: 200px;
+    padding-top: 8px;
+    border-top: 1px solid #2d2d2d;
+}
+
+/* Links da sidebar */
+.sidebar a {
+    display: block;
+    padding: 12px 16px;
+    margin: 0 8px;
+    background: #2d2d2d;
+    color: #e3e3e3;
+    text-decoration: none;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.sidebar a:hover {
+    background: #404040;
+}
+
+.sidebar p {
+    font-size: 12px;
+    color: #9aa0a6;
+    margin: 8px 16px;
+    line-height: 1.4;
+}
+
+/* Estado collapsed da sidebar */
+.sidebar.collapsed .sidebar-title,
+.sidebar.collapsed .section-body,
+.sidebar.collapsed .chat-question-sidebar,
+.sidebar.collapsed .chat-answer-sidebar,
+.sidebar.collapsed .sidebar p {
+    display: none;
+}
+
+.sidebar.collapsed .section-toggle {
+    padding: 12px;
+    margin: 4px;
+    justify-content: center;
+}
+
+.sidebar.collapsed .section-toggle span:not(:first-child) {
+    display: none;
+}
