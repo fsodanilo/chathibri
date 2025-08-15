@@ -6,6 +6,20 @@ Uma Solução Dual de Inteligência Artificial para Extração Estruturada de Da
 
 O ChatHib é uma solução corporativa que permite interação natural com documentos PDF através de chat inteligente, utilizando modelos de linguagem avançados (AWS Bedrock Claude 3.5 Sonnet e Google Generative AI) para fornecer respostas contextuais baseadas no conteúdo dos documentos.
 
+## Telas do chat
+
+*Interface principal do ChatHib mostrando o chat interativo e upload de documentos*
+
+![Interface do ChatHib](img/chat-pergunta.png)
+
+*Pipeline do ChatHib mostrando o processamento do pdf*
+
+![Interface do ChatHib](img/pipeline-rag.png)
+
+*Pipeline do ChatHib mostrando o sucesso do processamento*
+
+![Interface do ChatHib](img/pipeline-sucesso.png)
+
 ## Arquitetura do Sistema
 
 ### Componentes Principais
