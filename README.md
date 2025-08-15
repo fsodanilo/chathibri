@@ -12,6 +12,14 @@ O ChatHib é uma solução corporativa que permite interação natural com docum
 
 ![Interface do ChatHib](img/chat-pergunta.png)
 
+*Pipeline do ChatHib mostrando o processamento do pdf*
+
+![Interface do ChatHib](img/pipeline-rag.png)
+
+*Pipeline do ChatHib mostrando o sucesso do processamento*
+
+![Interface do ChatHib](img/pipeline-sucesso.png)
+
 ## Arquitetura do Sistema
 
 ### Componentes Principais
